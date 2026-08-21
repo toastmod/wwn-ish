@@ -1,0 +1,3 @@
+[submodule "dependencies/libs/ish-arm64"]
+	path = dependencies/libs/ish-arm64
+	url = https://github.com/toastmod/ish-arm64
