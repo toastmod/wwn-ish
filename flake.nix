@@ -3,6 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    flake-utils.url = "github:numtide/flake-utils"; 
     rust-overlay.url = "github:oxalica/rust-overlay";
     rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
     wwn-toolchain.url = "https://flakehub.com/f/Wawona/wwn-toolchain/*";
@@ -10,13 +11,17 @@
     wwn-toolchain.inputs.rust-overlay.follows = "rust-overlay";
   };
 
-  outputs = { self, nixpkgs, rust-overlay, wwn-toolchain, ... }:
-    ishDir = ./dependencies/libs/ish-arm64
+  # Added flake-utils to the arguments list
+  outputs = { self, nixpkgs, flake-utils, rust-overlay, wwn-toolchain, ... }:
+    let
+      # Moved ishDir inside a let block
+      ishDir = ./dependencies/libs/ish-arm64;
+    in
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
         
-        childShell = import ishDir+"/shell.nix" { inherit pkgs; };
+        childShell = import "${ishDir}/shell.nix" { inherit pkgs; };
       in
       {
         packages.default = pkgs.stdenv.mkDerivation {
@@ -24,7 +29,8 @@
           version = "1.0.0";
           src = ishDir;
 
-          nativeBuildInputs = childShell.nativeBuildInputs; 
+          nativeBuildInputs = childShell.nativeBuildInputs or [ ]; 
         };
-      });
+      }
+    );
 }
