@@ -3,34 +3,60 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils"; 
     rust-overlay.url = "github:oxalica/rust-overlay";
     rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
     wwn-toolchain.url = "https://flakehub.com/f/Wawona/wwn-toolchain/*";
     wwn-toolchain.inputs.nixpkgs.follows = "nixpkgs";
     wwn-toolchain.inputs.rust-overlay.follows = "rust-overlay";
+    
+    # non-flake Git repository
+    ish = {
+      url = "git+https://github.com/toastmod/ish-arm64";
+      flake = false;
+    };
   };
 
-  # Added flake-utils to the arguments list
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, wwn-toolchain, ... }:
+  outputs = { self, nixpkgs, rust-overlay, wwn-toolchain, ish, ... }:
     let
-      # Moved ishDir inside a let block
-      ishDir = ./dependencies/libs/ish-arm64;
-    in
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-        
-        childShell = import "${ishDir}/shell.nix" { inherit pkgs; };
-      in
-      {
-        packages.default = pkgs.stdenv.mkDerivation {
-          pname = "ish-arm64";
-          version = "1.0.0";
-          src = ishDir;
+      darwinSystems = [ "x86_64-darwin" "aarch64-darwin" ];
+      linuxSystems = [ "x86_64-linux" "aarch64-linux" ];
+      allSystems = darwinSystems ++ linuxSystems;
+      
+      # Generates an attribute set mapping all supported systems
+      forAll = nixpkgs.lib.genAttrs allSystems;
+      
+      inherit (wwn-toolchain.lib) withPlatformVariants baseRegistry mkToolchains;
 
-          nativeBuildInputs = childShell.nativeBuildInputs or [ ]; 
+      # Function to instantiate nixpkgs correctly for a given system
+      pkgsFor = system: import nixpkgs {
+        inherit system;
+        overlays = [ (import rust-overlay) ];
+        config = {
+          allowUnfree = true;
+          allowUnsupportedSystem = true;
         };
-      }
-    );
+      };
+    in
+    {
+
+      # Resolves the 'packages.<system>.default' attribute lookups
+      packages = forAll (system: 
+        let
+          pkgs = pkgsFor system;
+        in {
+          # Defines a fallback package derivation using the shell environment
+          default = import "${ish}/shell.nix" { inherit pkgs; };
+        }
+      );
+
+      # Iterates over every architecture to correctly supply the localized 'pkgs' 
+      # into the external shell.nix file
+      devShells = forAll (system: {
+        default = import "${ish}/shell.nix" {
+          pkgs = pkgsFor system;
+        };
+      });
+
+      formatter = forAll (system: (pkgsFor system).nixfmt-rfc-style);
+    };
 }
