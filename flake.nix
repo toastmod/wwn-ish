@@ -10,8 +10,8 @@
     wwn-toolchain.inputs.rust-overlay.follows = "rust-overlay";
     
     # non-flake Git repository
-    ish = {
-      url = "git+https://github.com/toastmod/ish-arm64";
+    ish-src = {
+      url = "github:toastmod/ish-arm64/master?submodules=1";
       flake = false;
     };
   };
@@ -43,19 +43,28 @@
       packages = forAll (system: 
         let
           pkgs = pkgsFor system;
+          repoShell = import "${ish}/shell.nix" { inherit pkgs; };
         in {
-          # Defines a fallback package derivation using the shell environment
-          default = import "${ish}/shell.nix" { inherit pkgs; };
+          default = pkgs.stdenv.mkDerivation {
+            pname = "ish";
+            version = "1.0.0";
+            src = ish-src;
+            nativeBuildInputs = 
+              (repoShell.nativeBuildInputs or []) ++
+              (repoShell.buildInputs or []) ++
+              (repoShell.packages or []); 
+
+          }
         }
       );
 
       # Iterates over every architecture to correctly supply the localized 'pkgs' 
       # into the external shell.nix file
-      devShells = forAll (system: {
-        default = import "${ish}/shell.nix" {
-          pkgs = pkgsFor system;
-        };
-      });
+      # devShells = forAll (system: {
+      #   default = import "${ish}/shell.nix" {
+      #     pkgs = pkgsFor system;
+      #   };
+      # });
 
       formatter = forAll (system: (pkgsFor system).nixfmt-rfc-style);
     };
