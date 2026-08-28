@@ -36,6 +36,22 @@
           allowUnsupportedSystem = true;
         };
       };
+
+      ishDir = "./dependencies/libs/ish";
+
+      registryFragment = {
+        ish = withPlatformVariants {
+          android = ishDir + "/stub.nix";
+          wearos = ishDir + "/stub.nix";
+          ios = ishDir + "/apple-mobile.nix";
+          tvos = ishDir + "/stub.nix";
+          ipados = ishDir + "/apple-mobile.nix";
+          visionos = ishDir + "/stub.nix";
+          watchos = ishDir + "/stub.nix";
+          macos = ishDir + "/stub.nix";
+          linux = ishDir + "/stub.nix";
+        };
+      };
     in
     {
 
