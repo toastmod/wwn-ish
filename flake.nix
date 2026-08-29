@@ -11,12 +11,12 @@
     
     # non-flake Git repository
     ish-src = {
-      url = "github:toastmod/ish-arm64/master?submodules=1";
+      url = "github:toastmod/ish-arm64";
       flake = false;
     };
   };
 
-  outputs = { self, nixpkgs, rust-overlay, wwn-toolchain, ish, ... }:
+  outputs = { self, nixpkgs, rust-overlay, wwn-toolchain, ish-src, ... }:
     let
       darwinSystems = [ "x86_64-darwin" "aarch64-darwin" ];
       linuxSystems = [ "x86_64-linux" "aarch64-linux" ];
@@ -59,7 +59,7 @@
       packages = forAll (system: 
         let
           pkgs = pkgsFor system;
-          repoShell = import "${ish}/shell.nix" { inherit pkgs; };
+          repoShell = import "${ish-src}/shell.nix" { inherit pkgs; };
         in {
           default = pkgs.stdenv.mkDerivation {
             pname = "ish";
@@ -70,7 +70,7 @@
               (repoShell.buildInputs or []) ++
               (repoShell.packages or []); 
 
-          }
+          };
         }
       );
 
