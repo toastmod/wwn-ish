@@ -39,6 +39,9 @@
 
       ishDir = "./dependencies/libs/ish";
 
+    in
+    {
+
       registryFragment = {
         ish = withPlatformVariants {
           android = ishDir + "/stub.nix";
@@ -52,8 +55,6 @@
           linux = ishDir + "/stub.nix";
         };
       };
-    in
-    {
 
       # Resolves the 'packages.<system>.default' attribute lookups
       packages = forAll (system: 
